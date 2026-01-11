@@ -119,6 +119,42 @@ export const ZOOM_DEPTH_SCALES: Record<ZoomDepth, number> = {
 
 export const DEFAULT_ZOOM_DEPTH: ZoomDepth = 3;
 
+// ============================================
+// PRESET TYPES
+// ============================================
+
+export interface PresetSettings {
+  padding: number;           // 0-100
+  shadowIntensity: number;   // 0-1
+  borderRadius: number;      // 0-16
+  motionBlurEnabled: boolean;
+  showBlur: boolean;
+  wallpaper: string;         // Image path, color hex, or gradient CSS
+}
+
+export interface Preset {
+  id: string;              // Unique identifier (uuid)
+  name: string;            // User-defined name
+  createdAt: number;       // Timestamp for sorting
+  isDefault: boolean;      // Only one preset can be default
+  settings: PresetSettings;
+}
+
+export interface PresetStore {
+  version: number;
+  defaultPresetId: string | null;
+  presets: Preset[];
+}
+
+export const DEFAULT_PRESET_SETTINGS: PresetSettings = {
+  padding: 50,
+  shadowIntensity: 0,
+  borderRadius: 0,
+  motionBlurEnabled: true,
+  showBlur: false,
+  wallpaper: 'wallpapers/wallpaper1.jpg',
+};
+
 export function clampFocusToDepth(focus: ZoomFocus, _depth: ZoomDepth): ZoomFocus {
   return {
     cx: clamp(focus.cx, 0, 1),

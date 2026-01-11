@@ -42,6 +42,14 @@ interface Window {
     getPlatform: () => Promise<string>
     hudOverlayHide: () => void;
     hudOverlayClose: () => void;
+    presets: {
+      get: () => Promise<{ success: boolean; presets: Preset[]; defaultPresetId: string | null }>
+      save: (preset: { name: string; isDefault: boolean; settings: PresetSettings }) => Promise<{ success: boolean; preset?: Preset; error?: string }>
+      update: (id: string, updates: Partial<{ name: string; isDefault: boolean; settings: PresetSettings }>) => Promise<{ success: boolean; preset?: Preset; error?: string }>
+      delete: (id: string) => Promise<{ success: boolean; error?: string }>
+      duplicate: (id: string) => Promise<{ success: boolean; preset?: Preset; error?: string }>
+      setDefault: (id: string | null) => Promise<{ success: boolean; error?: string }>
+    }
   }
 }
 
@@ -51,4 +59,22 @@ interface ProcessedDesktopSource {
   display_id: string
   thumbnail: string | null
   appIcon: string | null
+}
+
+// Preset types for electronAPI
+interface PresetSettings {
+  padding: number
+  shadowIntensity: number
+  borderRadius: number
+  motionBlurEnabled: boolean
+  showBlur: boolean
+  wallpaper: string
+}
+
+interface Preset {
+  id: string
+  name: string
+  createdAt: number
+  isDefault: boolean
+  settings: PresetSettings
 }

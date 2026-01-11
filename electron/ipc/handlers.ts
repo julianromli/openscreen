@@ -3,6 +3,16 @@ import { ipcMain, desktopCapturer, BrowserWindow, shell, app, dialog } from 'ele
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { RECORDINGS_DIR } from '../main'
+import {
+  getPresets,
+  savePreset,
+  updatePreset,
+  deletePreset,
+  duplicatePreset,
+  setDefaultPreset,
+  type Preset,
+  type PresetSettings
+} from './presets'
 
 let selectedSource: any = null
 
@@ -211,5 +221,33 @@ export function registerIpcHandlers(
 
   ipcMain.handle('get-platform', () => {
     return process.platform;
+  });
+
+  // ============================================
+  // PRESET HANDLERS
+  // ============================================
+
+  ipcMain.handle('presets:get', async () => {
+    return await getPresets();
+  });
+
+  ipcMain.handle('presets:save', async (_, preset: { name: string; isDefault: boolean; settings: PresetSettings }) => {
+    return await savePreset(preset);
+  });
+
+  ipcMain.handle('presets:update', async (_, id: string, updates: Partial<Omit<Preset, 'id' | 'createdAt'>>) => {
+    return await updatePreset(id, updates);
+  });
+
+  ipcMain.handle('presets:delete', async (_, id: string) => {
+    return await deletePreset(id);
+  });
+
+  ipcMain.handle('presets:duplicate', async (_, id: string) => {
+    return await duplicatePreset(id);
+  });
+
+  ipcMain.handle('presets:setDefault', async (_, id: string | null) => {
+    return await setDefaultPreset(id);
   });
 }

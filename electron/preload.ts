@@ -63,4 +63,28 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPlatform: () => {
     return ipcRenderer.invoke('get-platform')
   },
+
+  // ============================================
+  // PRESET API
+  // ============================================
+  presets: {
+    get: () => {
+      return ipcRenderer.invoke('presets:get')
+    },
+    save: (preset: { name: string; isDefault: boolean; settings: any }) => {
+      return ipcRenderer.invoke('presets:save', preset)
+    },
+    update: (id: string, updates: any) => {
+      return ipcRenderer.invoke('presets:update', id, updates)
+    },
+    delete: (id: string) => {
+      return ipcRenderer.invoke('presets:delete', id)
+    },
+    duplicate: (id: string) => {
+      return ipcRenderer.invoke('presets:duplicate', id)
+    },
+    setDefault: (id: string | null) => {
+      return ipcRenderer.invoke('presets:setDefault', id)
+    },
+  },
 })

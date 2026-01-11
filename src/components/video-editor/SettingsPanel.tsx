@@ -9,10 +9,11 @@ import { useState } from "react";
 import Block from '@uiw/react-color-block';
 import { Trash2, Download, Crop, X, Bug, Upload, Star } from "lucide-react";
 import { toast } from "sonner";
-import type { ZoomDepth, CropRegion, AnnotationRegion, AnnotationType } from "./types";
+import type { ZoomDepth, CropRegion, AnnotationRegion, AnnotationType, Preset, PresetSettings } from "./types";
 import { CropControl } from "./CropControl";
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
 import { AnnotationSettingsPanel } from "./AnnotationSettingsPanel";
+import { PresetSelector } from "./PresetSelector";
 import { type AspectRatio } from "@/utils/aspectRatioUtils";
 import type { ExportQuality } from "@/lib/exporter";
 
@@ -78,6 +79,16 @@ interface SettingsPanelProps {
   onAnnotationStyleChange?: (id: string, style: Partial<AnnotationRegion['style']>) => void;
   onAnnotationFigureDataChange?: (id: string, figureData: any) => void;
   onAnnotationDelete?: (id: string) => void;
+  // Preset props
+  presets?: Preset[];
+  defaultPresetId?: string | null;
+  onApplyPreset?: (preset: Preset) => void;
+  onSavePreset?: (name: string, settings: PresetSettings, isDefault: boolean) => Promise<Preset | null>;
+  onDeletePreset?: (id: string) => Promise<boolean>;
+  onDuplicatePreset?: (id: string) => Promise<Preset | null>;
+  onRenamePreset?: (id: string, name: string) => Promise<boolean>;
+  onSetDefaultPreset?: (id: string | null) => Promise<boolean>;
+  onResetToDefaults?: () => void;
 }
 
 export default SettingsPanel;
@@ -124,6 +135,16 @@ export function SettingsPanel({
   onAnnotationStyleChange,
   onAnnotationFigureDataChange,
   onAnnotationDelete,
+  // Preset props
+  presets = [],
+  defaultPresetId = null,
+  onApplyPreset,
+  onSavePreset,
+  onDeletePreset,
+  onDuplicatePreset,
+  onRenamePreset,
+  onSetDefaultPreset,
+  onResetToDefaults,
 }: SettingsPanelProps) {
   const [wallpaperPaths, setWallpaperPaths] = useState<string[]>([]);
   const [customImages, setCustomImages] = useState<string[]>([]);
@@ -234,6 +255,29 @@ export function SettingsPanel({
 
   return (
     <div className="flex-[2] min-w-0 bg-[#09090b] border border-white/5 rounded-2xl p-4 flex flex-col shadow-xl h-full overflow-y-auto custom-scrollbar">
+      {/* Preset Selector - at top of settings panel */}
+      {onApplyPreset && onSavePreset && onDeletePreset && onDuplicatePreset && onRenamePreset && onSetDefaultPreset && onResetToDefaults && (
+        <PresetSelector
+          presets={presets}
+          defaultPresetId={defaultPresetId}
+          currentSettings={{
+            padding,
+            shadowIntensity,
+            borderRadius,
+            motionBlurEnabled,
+            showBlur: showBlur ?? false,
+            wallpaper: selected,
+          }}
+          onApplyPreset={onApplyPreset}
+          onSavePreset={onSavePreset}
+          onDeletePreset={onDeletePreset}
+          onDuplicatePreset={onDuplicatePreset}
+          onRenamePreset={onRenamePreset}
+          onSetDefaultPreset={onSetDefaultPreset}
+          onResetToDefaults={onResetToDefaults}
+        />
+      )}
+
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm font-medium text-slate-200">Zoom Level</span>

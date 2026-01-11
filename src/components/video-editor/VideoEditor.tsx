@@ -10,6 +10,7 @@ import PlaybackControls from "./PlaybackControls";
 import TimelineEditor from "./timeline/TimelineEditor";
 import { SettingsPanel } from "./SettingsPanel";
 import { ExportDialog } from "./ExportDialog";
+import { usePresets } from "@/hooks/usePresets";
 
 import type { Span } from "dnd-timeline";
 import {
@@ -20,6 +21,7 @@ import {
   DEFAULT_ANNOTATION_SIZE,
   DEFAULT_ANNOTATION_STYLE,
   DEFAULT_FIGURE_DATA,
+  DEFAULT_PRESET_SETTINGS,
   type ZoomDepth,
   type ZoomFocus,
   type ZoomRegion,
@@ -27,6 +29,8 @@ import {
   type AnnotationRegion,
   type CropRegion,
   type FigureData,
+  type Preset,
+  type PresetSettings,
 } from "./types";
 import { VideoExporter, type ExportProgress, type ExportQuality } from "@/lib/exporter";
 import { type AspectRatio, getAspectRatioValue } from "@/utils/aspectRatioUtils";
@@ -68,6 +72,64 @@ export default function VideoEditor() {
   const nextAnnotationIdRef = useRef(1);
   const nextAnnotationZIndexRef = useRef(1); // Track z-index for stacking order
   const exporterRef = useRef<VideoExporter | null>(null);
+  const hasAppliedDefaultPreset = useRef(false);
+
+  // Presets hook
+  const {
+    presets,
+    defaultPresetId,
+    savePreset,
+    updatePreset,
+    deletePreset,
+    duplicatePreset,
+    setDefaultPreset,
+    getDefaultPreset,
+  } = usePresets();
+
+  // Apply preset settings to state
+  const applyPresetSettings = useCallback((settings: PresetSettings) => {
+    setPadding(settings.padding);
+    setShadowIntensity(settings.shadowIntensity);
+    setBorderRadius(settings.borderRadius);
+    setMotionBlurEnabled(settings.motionBlurEnabled);
+    setShowBlur(settings.showBlur);
+    setWallpaper(settings.wallpaper);
+  }, []);
+
+  // Handle apply preset
+  const handleApplyPreset = useCallback((preset: Preset) => {
+    applyPresetSettings(preset.settings);
+  }, [applyPresetSettings]);
+
+  // Handle save preset
+  const handleSavePreset = useCallback(async (
+    name: string,
+    settings: PresetSettings,
+    isDefault: boolean
+  ): Promise<Preset | null> => {
+    return await savePreset(name, settings, isDefault);
+  }, [savePreset]);
+
+  // Handle rename preset
+  const handleRenamePreset = useCallback(async (id: string, name: string): Promise<boolean> => {
+    return await updatePreset(id, { name });
+  }, [updatePreset]);
+
+  // Handle reset to defaults
+  const handleResetToDefaults = useCallback(() => {
+    applyPresetSettings(DEFAULT_PRESET_SETTINGS);
+  }, [applyPresetSettings]);
+
+  // Load default preset on mount
+  useEffect(() => {
+    if (hasAppliedDefaultPreset.current) return;
+    
+    const defaultPreset = getDefaultPreset();
+    if (defaultPreset) {
+      applyPresetSettings(defaultPreset.settings);
+      hasAppliedDefaultPreset.current = true;
+    }
+  }, [getDefaultPreset, applyPresetSettings]);
 
   // Helper to convert file path to proper file:// URL
   const toFileUrl = (filePath: string): string => {
@@ -779,6 +841,16 @@ export default function VideoEditor() {
           onAnnotationStyleChange={handleAnnotationStyleChange}
           onAnnotationFigureDataChange={handleAnnotationFigureDataChange}
           onAnnotationDelete={handleAnnotationDelete}
+          // Preset props
+          presets={presets}
+          defaultPresetId={defaultPresetId}
+          onApplyPreset={handleApplyPreset}
+          onSavePreset={handleSavePreset}
+          onDeletePreset={deletePreset}
+          onDuplicatePreset={duplicatePreset}
+          onRenamePreset={handleRenamePreset}
+          onSetDefaultPreset={setDefaultPreset}
+          onResetToDefaults={handleResetToDefaults}
         />
       </div>
 
