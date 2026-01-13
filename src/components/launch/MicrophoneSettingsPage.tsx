@@ -110,10 +110,24 @@ export function MicrophoneSettingsPage() {
     setAudioSettings({ autoGainControl: enabled });
   };
 
-  // Close window
-  const handleClose = () => {
-    window.close();
-  };
+  // Close window - save all settings before closing
+  const handleClose = useCallback(() => {
+    // Explicitly save ALL current settings to localStorage before closing
+    setAudioSettings({
+      deviceId: selectedDeviceId,
+      enabled: isEnabled,
+      sampleRate: settings.sampleRate,
+      channelCount: settings.channelCount,
+      noiseSuppression: settings.noiseSuppression,
+      echoCancellation: settings.echoCancellation,
+      autoGainControl: settings.autoGainControl,
+    });
+    
+    // Small delay to ensure localStorage write completes
+    setTimeout(() => {
+      window.close();
+    }, 50);
+  }, [selectedDeviceId, isEnabled, settings]);
 
   return (
     <div 
