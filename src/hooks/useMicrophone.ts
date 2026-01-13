@@ -374,6 +374,42 @@ export function useMicrophone(constraints?: AudioConstraints): UseMicrophoneRetu
   }, [stream, cleanupAudioAnalyser, refreshDevices]);
 
   /**
+   * Effect: Re-apply constraints when they change (restart stream with new constraints)
+   */
+  useEffect(() => {
+    // Only re-apply if we're currently enabled and have a selected device
+    if (!isEnabled || !selectedDeviceId) return;
+
+    // Re-create stream with new constraints
+    const applyNewConstraints = async () => {
+      try {
+        // Stop current stream
+        if (streamRef.current) {
+          stopStream(streamRef.current);
+        }
+        cleanupAudioAnalyser();
+
+        // Get new stream with updated constraints
+        const newStream = await getAudioStream(selectedDeviceId, constraints);
+        setStream(newStream);
+        setupAudioAnalyser(newStream);
+      } catch (err) {
+        console.error('Failed to apply new audio constraints:', err);
+        setError(err as Error);
+      }
+    };
+
+    applyNewConstraints();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    constraints?.sampleRate,
+    constraints?.channelCount,
+    constraints?.noiseSuppression,
+    constraints?.echoCancellation,
+    constraints?.autoGainControl,
+  ]);
+
+  /**
    * Effect: Cleanup on unmount only
    */
   useEffect(() => {

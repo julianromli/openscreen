@@ -56,6 +56,33 @@ export function createHudOverlayWindow(): BrowserWindow {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
   })
 
+  // Handle window.open() calls for child windows (e.g., mic settings)
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    // Allow mic-settings window
+    if (url.includes('windowType=mic-settings')) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 340,
+          height: 520,
+          frame: false,
+          transparent: true,
+          resizable: false,
+          alwaysOnTop: true,
+          skipTaskbar: true,
+          parent: win,
+          modal: false,
+          webPreferences: {
+            preload: path.join(__dirname, 'preload.mjs'),
+            nodeIntegration: false,
+            contextIsolation: true,
+          },
+        }
+      }
+    }
+    return { action: 'deny' }
+  })
+
   hudOverlayWindow = win;
 
   win.on('closed', () => {
