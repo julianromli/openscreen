@@ -310,6 +310,38 @@ export function useMicrophone(): UseMicrophoneReturn {
   }, [refreshDevices]);
 
   /**
+   * Effect: Monitor stream health (handle disconnection mid-use)
+   */
+  useEffect(() => {
+    if (!stream) return;
+
+    const audioTracks = stream.getAudioTracks();
+    if (audioTracks.length === 0) return;
+
+    // Handle track ended event (microphone disconnected)
+    const handleTrackEnded = () => {
+      console.warn('Audio track ended - microphone may have been disconnected');
+      setError(new Error('Microphone disconnected'));
+      setIsEnabled(false);
+      setStream(null);
+      cleanupAudioAnalyser();
+      // Refresh device list to reflect current state
+      refreshDevices();
+    };
+
+    // Attach ended handler to all audio tracks
+    audioTracks.forEach(track => {
+      track.addEventListener('ended', handleTrackEnded);
+    });
+
+    return () => {
+      audioTracks.forEach(track => {
+        track.removeEventListener('ended', handleTrackEnded);
+      });
+    };
+  }, [stream, cleanupAudioAnalyser, refreshDevices]);
+
+  /**
    * Effect: Cleanup on unmount only
    */
   useEffect(() => {
