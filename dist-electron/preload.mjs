@@ -59,28 +59,5 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   },
   getPlatform: () => {
     return electron.ipcRenderer.invoke("get-platform");
-  },
-  // ============================================
-  // PRESET API
-  // ============================================
-  presets: {
-    get: () => {
-      return electron.ipcRenderer.invoke("presets:get");
-    },
-    save: (preset) => {
-      return electron.ipcRenderer.invoke("presets:save", preset);
-    },
-    update: (id, updates) => {
-      return electron.ipcRenderer.invoke("presets:update", id, updates);
-    },
-    delete: (id) => {
-      return electron.ipcRenderer.invoke("presets:delete", id);
-    },
-    duplicate: (id) => {
-      return electron.ipcRenderer.invoke("presets:duplicate", id);
-    },
-    setDefault: (id) => {
-      return electron.ipcRenderer.invoke("presets:setDefault", id);
-    }
   }
 });
