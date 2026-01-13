@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import styles from "./LaunchWindow.module.css";
 import { useScreenRecorder } from "../../hooks/useScreenRecorder";
+import { useMicrophone } from "../../hooks/useMicrophone";
 import { Button } from "../ui/button";
 import { BsRecordCircle } from "react-icons/bs";
 import { FaRegStopCircle } from "react-icons/fa";
@@ -9,9 +10,14 @@ import { RxDragHandleDots2 } from "react-icons/rx";
 import { FaFolderMinus } from "react-icons/fa6";
 import { FiMinus, FiX } from "react-icons/fi";
 import { ContentClamp } from "../ui/content-clamp";
+import { MicrophoneSelector } from "./MicrophoneSelector";
 
 export function LaunchWindow() {
-  const { recording, toggleRecording } = useScreenRecorder();
+  // Get audio stream from microphone hook
+  const { stream: audioStream } = useMicrophone();
+  
+  // Pass audio stream to screen recorder for combined recording
+  const { recording, toggleRecording } = useScreenRecorder({ audioStream });
   const [recordingStart, setRecordingStart] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
@@ -119,6 +125,11 @@ export function LaunchWindow() {
           <MdMonitor size={14} className="text-white" />
           <ContentClamp truncateLength={6}>{selectedSource}</ContentClamp>
         </Button>
+
+        <div className="w-px h-6 bg-white/30" />
+
+        {/* Microphone selector */}
+        <MicrophoneSelector disabled={recording} />
 
         <div className="w-px h-6 bg-white/30" />
 
