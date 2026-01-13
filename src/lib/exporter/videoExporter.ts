@@ -408,11 +408,13 @@ export class VideoExporter {
     });
 
     // Configure audio encoder with Opus codec
+    // Use configurable bitrate from settings, default to 192 kbps for high quality
+    const audioBitrateKbps = this.config.audioBitrate ?? 192;
     const audioEncoderConfig: AudioEncoderConfig = {
       codec: 'opus',
       sampleRate: sampleRate,
       numberOfChannels: numberOfChannels,
-      bitrate: 128000, // 128 kbps for good quality audio
+      bitrate: audioBitrateKbps * 1000, // Convert kbps to bps
     };
 
     const audioSupport = await AudioEncoder.isConfigSupported(audioEncoderConfig);

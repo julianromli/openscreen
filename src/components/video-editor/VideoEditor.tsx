@@ -66,6 +66,7 @@ export default function VideoEditor() {
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9');
   const [exportQuality, setExportQuality] = useState<ExportQuality>('good');
   const [exportFormat, setExportFormat] = useState<ExportFormat>('mp4');
+  const [audioBitrate, setAudioBitrate] = useState<128 | 192 | 256 | 320>(192);
   const [gifFrameRate, setGifFrameRate] = useState<GifFrameRate>(15);
   const [gifLoop, setGifLoop] = useState(true);
   const [gifSizePreset, setGifSizePreset] = useState<GifSizePreset>('medium');
@@ -710,6 +711,7 @@ export default function VideoEditor() {
           frameRate: 60,
           bitrate,
           codec: 'avc1.640033',
+          audioBitrate,
           wallpaper,
           zoomRegions,
           trimRegions,
@@ -927,6 +929,8 @@ export default function VideoEditor() {
           onExportQualityChange={setExportQuality}
           exportFormat={exportFormat}
           onExportFormatChange={setExportFormat}
+          audioBitrate={audioBitrate}
+          onAudioBitrateChange={setAudioBitrate}
           gifFrameRate={gifFrameRate}
           onGifFrameRateChange={setGifFrameRate}
           gifLoop={gifLoop}

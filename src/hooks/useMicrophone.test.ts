@@ -223,13 +223,43 @@ describe('useMicrophone Hook', () => {
   });
 
   describe('Stream Management', () => {
-    it('should call getUserMedia with correct deviceId constraint', async () => {
+    it('should call getUserMedia with correct deviceId and default constraints', async () => {
       const { getAudioStream } = await import('./useMicrophone');
       
       await getAudioStream('mic-1');
 
       expect(mockGetUserMedia).toHaveBeenCalledWith({
-        audio: { deviceId: { exact: 'mic-1' } },
+        audio: { 
+          deviceId: { exact: 'mic-1' },
+          sampleRate: { ideal: 48000 },
+          channelCount: { ideal: 2 },
+          noiseSuppression: { ideal: true },
+          echoCancellation: { ideal: false },
+          autoGainControl: { ideal: true },
+        },
+      });
+    });
+
+    it('should call getUserMedia with custom constraints', async () => {
+      const { getAudioStream } = await import('./useMicrophone');
+      
+      await getAudioStream('mic-1', {
+        sampleRate: 44100,
+        channelCount: 1,
+        noiseSuppression: false,
+        echoCancellation: true,
+        autoGainControl: false,
+      });
+
+      expect(mockGetUserMedia).toHaveBeenCalledWith({
+        audio: { 
+          deviceId: { exact: 'mic-1' },
+          sampleRate: { ideal: 44100 },
+          channelCount: { ideal: 1 },
+          noiseSuppression: { ideal: false },
+          echoCancellation: { ideal: true },
+          autoGainControl: { ideal: false },
+        },
       });
     });
 

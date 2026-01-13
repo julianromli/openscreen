@@ -1,4 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { SampleRate, ChannelCount } from '@/stores/audioSettings';
+
+/**
+ * Audio constraints for recording quality
+ */
+export interface AudioConstraints {
+  sampleRate?: SampleRate;
+  channelCount?: ChannelCount;
+  noiseSuppression?: boolean;
+  echoCancellation?: boolean;
+  autoGainControl?: boolean;
+}
 
 /**
  * Return type for the useMicrophone hook
@@ -44,17 +56,28 @@ export async function enumerateAudioInputDevices(): Promise<MediaDeviceInfo[]> {
 }
 
 /**
- * Get an audio stream for a specific device
+ * Get an audio stream for a specific device with optional quality constraints
  * @param deviceId - The device ID to get audio from
+ * @param constraints - Optional audio quality constraints
  * @returns MediaStream
  */
-export async function getAudioStream(deviceId: string): Promise<MediaStream> {
+export async function getAudioStream(
+  deviceId: string,
+  constraints?: AudioConstraints
+): Promise<MediaStream> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error('getUserMedia not supported');
   }
   
   return navigator.mediaDevices.getUserMedia({
-    audio: { deviceId: { exact: deviceId } },
+    audio: {
+      deviceId: { exact: deviceId },
+      sampleRate: { ideal: constraints?.sampleRate ?? 48000 },
+      channelCount: { ideal: constraints?.channelCount ?? 2 },
+      noiseSuppression: { ideal: constraints?.noiseSuppression ?? true },
+      echoCancellation: { ideal: constraints?.echoCancellation ?? false },
+      autoGainControl: { ideal: constraints?.autoGainControl ?? true },
+    },
   });
 }
 
@@ -137,8 +160,11 @@ export function startAudioLevelMonitoring(
  * - Real-time audio level metering at ~60fps
  * - Permission state tracking
  * - Error handling
+ * - Audio quality constraints (sample rate, channels, noise suppression, etc.)
+ * 
+ * @param constraints - Optional audio quality constraints
  */
-export function useMicrophone(): UseMicrophoneReturn {
+export function useMicrophone(constraints?: AudioConstraints): UseMicrophoneReturn {
   // State
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
@@ -147,6 +173,12 @@ export function useMicrophone(): UseMicrophoneReturn {
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const [permissionState, setPermissionState] = useState<UseMicrophoneReturn['permissionState']>('unknown');
+
+  // Store constraints in ref to avoid dependency issues
+  const constraintsRef = useRef<AudioConstraints | undefined>(constraints);
+  useEffect(() => {
+    constraintsRef.current = constraints;
+  }, [constraints]);
 
   // Refs for cleanup
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -242,7 +274,7 @@ export function useMicrophone(): UseMicrophoneReturn {
     }
 
     try {
-      const newStream = await getAudioStream(deviceId);
+      const newStream = await getAudioStream(deviceId, constraintsRef.current);
       setStream(newStream);
       setSelectedDeviceId(deviceId);
       setIsEnabled(true);

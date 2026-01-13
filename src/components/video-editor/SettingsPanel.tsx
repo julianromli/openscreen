@@ -72,6 +72,9 @@ interface SettingsPanelProps {
   videoElement?: HTMLVideoElement | null;
   exportQuality?: ExportQuality;
   onExportQualityChange?: (quality: ExportQuality) => void;
+  // Audio export settings
+  audioBitrate?: 128 | 192 | 256 | 320;
+  onAudioBitrateChange?: (bitrate: 128 | 192 | 256 | 320) => void;
   // Export format settings
   exportFormat?: ExportFormat;
   onExportFormatChange?: (format: ExportFormat) => void;
@@ -138,6 +141,8 @@ export function SettingsPanel({
   videoElement, 
   exportQuality = 'good',
   onExportQualityChange,
+  audioBitrate = 192,
+  onAudioBitrateChange,
   exportFormat = 'mp4',
   onExportFormatChange,
   gifFrameRate = 15,
@@ -681,9 +686,29 @@ export function SettingsPanel({
                     : "text-slate-400 hover:text-slate-200"
                 )}
               >
-                High
+              High
               </button>
             </div>
+
+            {/* Audio Quality */}
+            <div className="mb-2 text-xs font-medium text-slate-400 mt-4">Audio Quality</div>
+            <div className="mb-4 bg-white/5 border border-white/5 p-1 w-full grid grid-cols-4 h-auto rounded-xl">
+              {([128, 192, 256, 320] as const).map((bitrate) => (
+                <button
+                  key={bitrate}
+                  onClick={() => onAudioBitrateChange?.(bitrate)}
+                  className={cn(
+                    "py-2 rounded-lg transition-all text-xs font-medium",
+                    audioBitrate === bitrate
+                      ? "bg-white text-black"
+                      : "text-slate-400 hover:text-slate-200"
+                  )}
+                >
+                  {bitrate}
+                </button>
+              ))}
+            </div>
+            <div className="text-[10px] text-slate-500 -mt-2 mb-2">Audio bitrate in kbps</div>
           </>
         )}
 

@@ -76,6 +76,12 @@ describe('audioSettings Store', () => {
       expect(settings).toEqual({
         deviceId: null,
         enabled: false,
+        sampleRate: 48000,
+        channelCount: 2,
+        noiseSuppression: true,
+        echoCancellation: false,
+        autoGainControl: true,
+        audioBitrate: 192,
       });
     });
 
@@ -83,6 +89,12 @@ describe('audioSettings Store', () => {
       const storedSettings = {
         deviceId: 'mic-123',
         enabled: true,
+        sampleRate: 44100,
+        channelCount: 1,
+        noiseSuppression: false,
+        echoCancellation: true,
+        autoGainControl: false,
+        audioBitrate: 256,
       };
       localStorageMock.store[STORAGE_KEY] = JSON.stringify(storedSettings);
 
@@ -103,11 +115,17 @@ describe('audioSettings Store', () => {
       expect(settings).toEqual({
         deviceId: null,
         enabled: false,
+        sampleRate: 48000,
+        channelCount: 2,
+        noiseSuppression: true,
+        echoCancellation: false,
+        autoGainControl: true,
+        audioBitrate: 192,
       });
     });
 
     it('should return partial defaults for incomplete stored data', async () => {
-      // Only deviceId stored, enabled should default
+      // Only deviceId stored, others should default
       localStorageMock.store[STORAGE_KEY] = JSON.stringify({ deviceId: 'mic-456' });
 
       const { getAudioSettings } = await import('./audioSettings');
@@ -116,6 +134,12 @@ describe('audioSettings Store', () => {
       
       expect(settings.deviceId).toBe('mic-456');
       expect(settings.enabled).toBe(false);
+      expect(settings.sampleRate).toBe(48000);
+      expect(settings.channelCount).toBe(2);
+      expect(settings.noiseSuppression).toBe(true);
+      expect(settings.echoCancellation).toBe(false);
+      expect(settings.autoGainControl).toBe(true);
+      expect(settings.audioBitrate).toBe(192);
     });
   });
 
@@ -201,6 +225,12 @@ describe('audioSettings Store', () => {
       expect(settings).toEqual({
         deviceId: null,
         enabled: false,
+        sampleRate: 48000,
+        channelCount: 2,
+        noiseSuppression: true,
+        echoCancellation: false,
+        autoGainControl: true,
+        audioBitrate: 192,
       });
     });
   });
@@ -228,6 +258,12 @@ describe('audioSettings Store', () => {
       expect(settings).toEqual({
         deviceId: null,
         enabled: false,
+        sampleRate: 48000,
+        channelCount: 2,
+        noiseSuppression: true,
+        echoCancellation: false,
+        autoGainControl: true,
+        audioBitrate: 192,
       });
     });
 
@@ -279,6 +315,12 @@ describe('audioSettings Store', () => {
       expect(DEFAULT_SETTINGS).toEqual({
         deviceId: null,
         enabled: false,
+        sampleRate: 48000,
+        channelCount: 2,
+        noiseSuppression: true,
+        echoCancellation: false,
+        autoGainControl: true,
+        audioBitrate: 192,
       });
     });
 
@@ -286,6 +328,87 @@ describe('audioSettings Store', () => {
       const { STORAGE_KEY: exportedKey } = await import('./audioSettings');
       
       expect(exportedKey).toBe('openscreen:audioSettings');
+    });
+
+    it('should export audio settings option arrays', async () => {
+      const { 
+        SAMPLE_RATE_OPTIONS, 
+        CHANNEL_COUNT_OPTIONS, 
+        AUDIO_BITRATE_OPTIONS 
+      } = await import('./audioSettings');
+      
+      expect(SAMPLE_RATE_OPTIONS).toHaveLength(2);
+      expect(SAMPLE_RATE_OPTIONS.map(o => o.value)).toEqual([44100, 48000]);
+      
+      expect(CHANNEL_COUNT_OPTIONS).toHaveLength(2);
+      expect(CHANNEL_COUNT_OPTIONS.map(o => o.value)).toEqual([1, 2]);
+      
+      expect(AUDIO_BITRATE_OPTIONS).toHaveLength(4);
+      expect(AUDIO_BITRATE_OPTIONS.map(o => o.value)).toEqual([128, 192, 256, 320]);
+    });
+  });
+
+  describe('Advanced Audio Settings', () => {
+    it('should persist and retrieve sample rate', async () => {
+      const { setAudioSettings, getAudioSettings } = await import('./audioSettings');
+      
+      setAudioSettings({ sampleRate: 44100 });
+      expect(getAudioSettings().sampleRate).toBe(44100);
+      
+      setAudioSettings({ sampleRate: 48000 });
+      expect(getAudioSettings().sampleRate).toBe(48000);
+    });
+
+    it('should persist and retrieve channel count', async () => {
+      const { setAudioSettings, getAudioSettings } = await import('./audioSettings');
+      
+      setAudioSettings({ channelCount: 1 });
+      expect(getAudioSettings().channelCount).toBe(1);
+      
+      setAudioSettings({ channelCount: 2 });
+      expect(getAudioSettings().channelCount).toBe(2);
+    });
+
+    it('should persist and retrieve processing toggles', async () => {
+      const { setAudioSettings, getAudioSettings } = await import('./audioSettings');
+      
+      setAudioSettings({ 
+        noiseSuppression: false,
+        echoCancellation: true,
+        autoGainControl: false,
+      });
+      
+      const settings = getAudioSettings();
+      expect(settings.noiseSuppression).toBe(false);
+      expect(settings.echoCancellation).toBe(true);
+      expect(settings.autoGainControl).toBe(false);
+    });
+
+    it('should persist and retrieve audio bitrate', async () => {
+      const { setAudioSettings, getAudioSettings } = await import('./audioSettings');
+      
+      const bitrates = [128, 192, 256, 320] as const;
+      for (const bitrate of bitrates) {
+        setAudioSettings({ audioBitrate: bitrate });
+        expect(getAudioSettings().audioBitrate).toBe(bitrate);
+      }
+    });
+
+    it('should fallback to defaults for invalid values', async () => {
+      // Store invalid values
+      localStorageMock.store[STORAGE_KEY] = JSON.stringify({
+        sampleRate: 96000, // invalid
+        channelCount: 5,   // invalid
+        audioBitrate: 64,  // invalid
+      });
+
+      const { getAudioSettings } = await import('./audioSettings');
+      const settings = getAudioSettings();
+      
+      // Should fallback to defaults
+      expect(settings.sampleRate).toBe(48000);
+      expect(settings.channelCount).toBe(2);
+      expect(settings.audioBitrate).toBe(192);
     });
   });
 });

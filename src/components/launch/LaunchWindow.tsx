@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import styles from "./LaunchWindow.module.css";
 import { useScreenRecorder } from "../../hooks/useScreenRecorder";
 import { useMicrophone } from "../../hooks/useMicrophone";
@@ -11,9 +11,59 @@ import { FaFolderMinus } from "react-icons/fa6";
 import { FiMinus, FiX } from "react-icons/fi";
 import { ContentClamp } from "../ui/content-clamp";
 import { MicrophoneSelector } from "./MicrophoneSelector";
+import { 
+  getAudioSettings, 
+  setAudioSettings,
+  type SampleRate,
+  type ChannelCount,
+} from "../../stores/audioSettings";
 
 export function LaunchWindow() {
+  // Audio settings state
+  const [sampleRate, setSampleRate] = useState<SampleRate>(48000);
+  const [channelCount, setChannelCount] = useState<ChannelCount>(2);
+  const [noiseSuppression, setNoiseSuppression] = useState(true);
+  const [echoCancellation, setEchoCancellation] = useState(false);
+  const [autoGainControl, setAutoGainControl] = useState(true);
+
+  // Load audio settings on mount
+  useEffect(() => {
+    const settings = getAudioSettings();
+    setSampleRate(settings.sampleRate);
+    setChannelCount(settings.channelCount);
+    setNoiseSuppression(settings.noiseSuppression);
+    setEchoCancellation(settings.echoCancellation);
+    setAutoGainControl(settings.autoGainControl);
+  }, []);
+
+  // Persist audio settings when they change
+  const handleSampleRateChange = useCallback((rate: SampleRate) => {
+    setSampleRate(rate);
+    setAudioSettings({ sampleRate: rate });
+  }, []);
+
+  const handleChannelCountChange = useCallback((count: ChannelCount) => {
+    setChannelCount(count);
+    setAudioSettings({ channelCount: count });
+  }, []);
+
+  const handleNoiseSuppressionChange = useCallback((enabled: boolean) => {
+    setNoiseSuppression(enabled);
+    setAudioSettings({ noiseSuppression: enabled });
+  }, []);
+
+  const handleEchoCancellationChange = useCallback((enabled: boolean) => {
+    setEchoCancellation(enabled);
+    setAudioSettings({ echoCancellation: enabled });
+  }, []);
+
+  const handleAutoGainControlChange = useCallback((enabled: boolean) => {
+    setAutoGainControl(enabled);
+    setAudioSettings({ autoGainControl: enabled });
+  }, []);
+
   // Get all microphone state from the single hook instance
+  // Pass audio constraints to the hook
   const {
     stream: audioStream,
     devices,
@@ -25,7 +75,13 @@ export function LaunchWindow() {
     disable,
     error: micError,
     permissionState,
-  } = useMicrophone();
+  } = useMicrophone({
+    sampleRate,
+    channelCount,
+    noiseSuppression,
+    echoCancellation,
+    autoGainControl,
+  });
   
   // Pass audio stream to screen recorder for combined recording
   const { recording, toggleRecording } = useScreenRecorder({ audioStream });
@@ -151,6 +207,17 @@ export function LaunchWindow() {
           error={micError}
           permissionState={permissionState}
           disabled={recording}
+          // Advanced audio settings
+          sampleRate={sampleRate}
+          onSampleRateChange={handleSampleRateChange}
+          channelCount={channelCount}
+          onChannelCountChange={handleChannelCountChange}
+          noiseSuppression={noiseSuppression}
+          onNoiseSuppressionChange={handleNoiseSuppressionChange}
+          echoCancellation={echoCancellation}
+          onEchoCancellationChange={handleEchoCancellationChange}
+          autoGainControl={autoGainControl}
+          onAutoGainControlChange={handleAutoGainControlChange}
         />
 
         <div className="w-px h-6 bg-white/30" />

@@ -1,9 +1,25 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { getAudioSettings, setAudioSettings } from "../../stores/audioSettings";
+import { Switch } from "../ui/switch";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "../ui/select";
+import { 
+  getAudioSettings, 
+  setAudioSettings,
+  SAMPLE_RATE_OPTIONS,
+  CHANNEL_COUNT_OPTIONS,
+  type SampleRate,
+  type ChannelCount,
+} from "../../stores/audioSettings";
 import { cn } from "@/lib/utils";
 import { FaMicrophone, FaMicrophoneSlash, FaCheck } from "react-icons/fa";
+import { ChevronDown, Settings } from "lucide-react";
 import styles from "./LaunchWindow.module.css";
 
 // ============================================
@@ -33,6 +49,28 @@ interface MicrophoneSelectorProps {
   error: Error | null;
   /** Current permission state */
   permissionState: 'granted' | 'denied' | 'prompt' | 'unknown';
+  
+  // Advanced Audio Settings
+  /** Current sample rate */
+  sampleRate: SampleRate;
+  /** Callback when sample rate changes */
+  onSampleRateChange: (rate: SampleRate) => void;
+  /** Current channel count */
+  channelCount: ChannelCount;
+  /** Callback when channel count changes */
+  onChannelCountChange: (count: ChannelCount) => void;
+  /** Whether noise suppression is enabled */
+  noiseSuppression: boolean;
+  /** Callback when noise suppression changes */
+  onNoiseSuppressionChange: (enabled: boolean) => void;
+  /** Whether echo cancellation is enabled */
+  echoCancellation: boolean;
+  /** Callback when echo cancellation changes */
+  onEchoCancellationChange: (enabled: boolean) => void;
+  /** Whether auto gain control is enabled */
+  autoGainControl: boolean;
+  /** Callback when auto gain control changes */
+  onAutoGainControlChange: (enabled: boolean) => void;
 }
 
 // ============================================
@@ -51,7 +89,20 @@ export function MicrophoneSelector({
   disable,
   error,
   permissionState,
+  // Advanced settings
+  sampleRate,
+  onSampleRateChange,
+  channelCount,
+  onChannelCountChange,
+  noiseSuppression,
+  onNoiseSuppressionChange,
+  echoCancellation,
+  onEchoCancellationChange,
+  autoGainControl,
+  onAutoGainControlChange,
 }: MicrophoneSelectorProps) {
+  // State for collapsible advanced settings
+  const [showAdvanced, setShowAdvanced] = useState(false);
   // Restore settings from localStorage on mount
   useEffect(() => {
     const savedSettings = getAudioSettings();
@@ -247,6 +298,103 @@ export function MicrophoneSelector({
             </span>
           </button>
         </div>
+
+        {/* Advanced Settings Toggle */}
+        <div className="px-3 py-2 border-t border-white/10">
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full flex items-center justify-between py-1 text-left group"
+          >
+            <div className="flex items-center gap-2">
+              <Settings size={12} className="text-zinc-400" />
+              <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">
+                Advanced Settings
+              </span>
+            </div>
+            <ChevronDown 
+              size={14} 
+              className={cn(
+                "text-zinc-400 transition-transform duration-200",
+                showAdvanced && "rotate-180"
+              )} 
+            />
+          </button>
+        </div>
+
+        {/* Advanced Settings Panel */}
+        {showAdvanced && (
+          <div className="px-3 py-2.5 border-t border-white/10 space-y-3">
+            {/* Sample Rate */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Sample Rate</span>
+              <Select 
+                value={String(sampleRate)} 
+                onValueChange={(v) => onSampleRateChange(Number(v) as SampleRate)}
+              >
+                <SelectTrigger className="w-24 h-7 text-xs bg-white/5 border-white/10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SAMPLE_RATE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={String(opt.value)} className="text-xs">
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Channel Count */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Channels</span>
+              <Select 
+                value={String(channelCount)} 
+                onValueChange={(v) => onChannelCountChange(Number(v) as ChannelCount)}
+              >
+                <SelectTrigger className="w-24 h-7 text-xs bg-white/5 border-white/10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHANNEL_COUNT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={String(opt.value)} className="text-xs">
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Noise Suppression */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Noise Suppression</span>
+              <Switch 
+                checked={noiseSuppression} 
+                onCheckedChange={onNoiseSuppressionChange}
+                className="data-[state=checked]:bg-emerald-500 h-5 w-9"
+              />
+            </div>
+
+            {/* Echo Cancellation */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Echo Cancellation</span>
+              <Switch 
+                checked={echoCancellation} 
+                onCheckedChange={onEchoCancellationChange}
+                className="data-[state=checked]:bg-emerald-500 h-5 w-9"
+              />
+            </div>
+
+            {/* Auto Gain Control */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-400">Auto Gain</span>
+              <Switch 
+                checked={autoGainControl} 
+                onCheckedChange={onAutoGainControlChange}
+                className="data-[state=checked]:bg-emerald-500 h-5 w-9"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (
