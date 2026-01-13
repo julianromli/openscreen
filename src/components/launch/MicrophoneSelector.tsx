@@ -1,6 +1,12 @@
 import { useEffect, useCallback, useState } from "react";
 import { Button } from "../ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "../ui/dialog";
 import { Switch } from "../ui/switch";
 import { 
   Select, 
@@ -19,7 +25,6 @@ import {
 } from "../../stores/audioSettings";
 import { cn } from "@/lib/utils";
 import { FaMicrophone, FaMicrophoneSlash, FaCheck } from "react-icons/fa";
-import { ChevronDown, Settings } from "lucide-react";
 import styles from "./LaunchWindow.module.css";
 
 // ============================================
@@ -101,8 +106,8 @@ export function MicrophoneSelector({
   autoGainControl,
   onAutoGainControlChange,
 }: MicrophoneSelectorProps) {
-  // State for collapsible advanced settings
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [open, setOpen] = useState(false);
+
   // Restore settings from localStorage on mount
   useEffect(() => {
     const savedSettings = getAudioSettings();
@@ -167,8 +172,8 @@ export function MicrophoneSelector({
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button
           variant="link"
           size="sm"
@@ -189,78 +194,80 @@ export function MicrophoneSelector({
             Mic
           </span>
         </Button>
-      </PopoverTrigger>
+      </DialogTrigger>
 
-      <PopoverContent
-        side="top"
-        align="center"
-        sideOffset={12}
+      <DialogContent 
         className={cn(
-          "w-64 p-0 border-0 overflow-hidden",
+          "w-80 p-0 border-0 overflow-hidden",
           styles.electronNoDrag
         )}
         style={{
-          background: 'linear-gradient(135deg, rgba(30,30,40,0.95) 0%, rgba(20,20,30,0.92) 100%)',
+          background: 'linear-gradient(135deg, rgba(30,30,40,0.98) 0%, rgba(20,20,30,0.96) 100%)',
           backdropFilter: 'blur(32px) saturate(180%)',
           WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-          boxShadow: '0 8px 32px 0 rgba(0,0,0,0.4), 0 2px 8px 0 rgba(0,0,0,0.2)',
+          boxShadow: '0 8px 32px 0 rgba(0,0,0,0.5), 0 2px 8px 0 rgba(0,0,0,0.3)',
           border: '1px solid rgba(80,80,120,0.25)',
-          borderRadius: 12,
+          borderRadius: 16,
         }}
       >
         {/* Header */}
-        <div className="px-3 py-2.5 border-b border-white/10">
-          <div className="flex items-center gap-2 text-white text-sm font-medium">
-            <FaMicrophone size={12} className="text-white/70" />
-            <span>Microphone</span>
-          </div>
-        </div>
+        <DialogHeader className="px-4 pt-4 pb-3 border-b border-white/10">
+          <DialogTitle className="flex items-center gap-2 text-white text-base font-medium">
+            <FaMicrophone size={14} className="text-white/70" />
+            Microphone Settings
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Device List */}
-        <div className="px-1.5 py-1.5 max-h-40 overflow-y-auto">
-          {devices.length === 0 ? (
-            <div className="px-2.5 py-3 text-center text-zinc-400 text-xs">
-              No microphones found
-            </div>
-          ) : (
-            devices.map((device) => (
-              <button
-                key={device.deviceId}
-                onClick={() => handleDeviceSelect(device.deviceId)}
-                className={cn(
-                  "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors",
-                  "hover:bg-white/5",
-                  selectedDeviceId === device.deviceId && "bg-white/10"
-                )}
-              >
-                <div className={cn(
-                  "flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                  selectedDeviceId === device.deviceId
-                    ? "border-emerald-400 bg-emerald-400"
-                    : "border-zinc-500"
-                )}>
-                  {selectedDeviceId === device.deviceId && (
-                    <FaCheck size={8} className="text-zinc-900" />
+        <div className="px-2 py-2">
+          <div className="px-2 pb-1.5">
+            <span className="text-xs text-zinc-500 uppercase tracking-wide">Select Device</span>
+          </div>
+          <div className="max-h-32 overflow-y-auto">
+            {devices.length === 0 ? (
+              <div className="px-2 py-3 text-center text-zinc-400 text-xs">
+                No microphones found
+              </div>
+            ) : (
+              devices.map((device) => (
+                <button
+                  key={device.deviceId}
+                  onClick={() => handleDeviceSelect(device.deviceId)}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors",
+                    "hover:bg-white/5",
+                    selectedDeviceId === device.deviceId && "bg-white/10"
                   )}
-                </div>
-                <span className={cn(
-                  "text-xs truncate flex-1",
-                  selectedDeviceId === device.deviceId
-                    ? "text-white"
-                    : "text-zinc-300"
-                )}>
-                  {device.label || `Microphone ${device.deviceId.slice(0, 8)}`}
-                </span>
-              </button>
-            ))
-          )}
+                >
+                  <div className={cn(
+                    "flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                    selectedDeviceId === device.deviceId
+                      ? "border-emerald-400 bg-emerald-400"
+                      : "border-zinc-500"
+                  )}>
+                    {selectedDeviceId === device.deviceId && (
+                      <FaCheck size={8} className="text-zinc-900" />
+                    )}
+                  </div>
+                  <span className={cn(
+                    "text-xs truncate flex-1",
+                    selectedDeviceId === device.deviceId
+                      ? "text-white"
+                      : "text-zinc-300"
+                  )}>
+                    {device.label || `Microphone ${device.deviceId.slice(0, 8)}`}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Audio Level Meter */}
         {isEnabled && (
-          <div className="px-3 py-2.5 border-t border-white/10">
+          <div className="px-4 py-3 border-t border-white/10">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-zinc-400">Level</span>
+              <span className="text-xs text-zinc-400">Input Level</span>
               <span className="text-xs text-zinc-500">{Math.round(audioLevel)}%</span>
             </div>
             <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
@@ -278,10 +285,10 @@ export function MicrophoneSelector({
         )}
 
         {/* Mute Toggle */}
-        <div className="px-3 py-2.5 border-t border-white/10">
+        <div className="px-4 py-3 border-t border-white/10">
           <button
             onClick={handleMuteToggle}
-            className="w-full flex items-center gap-2.5 py-1.5 text-left group"
+            className="w-full flex items-center gap-2.5 py-1 text-left group"
           >
             <div className={cn(
               "flex-shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
@@ -299,39 +306,21 @@ export function MicrophoneSelector({
           </button>
         </div>
 
-        {/* Advanced Settings Toggle */}
-        <div className="px-3 py-2 border-t border-white/10">
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between py-1 text-left group"
-          >
-            <div className="flex items-center gap-2">
-              <Settings size={12} className="text-zinc-400" />
-              <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">
-                Advanced Settings
-              </span>
-            </div>
-            <ChevronDown 
-              size={14} 
-              className={cn(
-                "text-zinc-400 transition-transform duration-200",
-                showAdvanced && "rotate-180"
-              )} 
-            />
-          </button>
-        </div>
-
-        {/* Advanced Settings Panel */}
-        {showAdvanced && (
-          <div className="px-3 py-2.5 border-t border-white/10 space-y-3">
+        {/* Audio Quality Settings */}
+        <div className="px-4 py-3 border-t border-white/10">
+          <div className="pb-2">
+            <span className="text-xs text-zinc-500 uppercase tracking-wide">Audio Quality</span>
+          </div>
+          
+          <div className="space-y-3">
             {/* Sample Rate */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-400">Sample Rate</span>
+              <span className="text-xs text-zinc-300">Sample Rate</span>
               <Select 
                 value={String(sampleRate)} 
                 onValueChange={(v) => onSampleRateChange(Number(v) as SampleRate)}
               >
-                <SelectTrigger className="w-24 h-7 text-xs bg-white/5 border-white/10">
+                <SelectTrigger className="w-28 h-8 text-xs bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -346,12 +335,12 @@ export function MicrophoneSelector({
 
             {/* Channel Count */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-400">Channels</span>
+              <span className="text-xs text-zinc-300">Channels</span>
               <Select 
                 value={String(channelCount)} 
                 onValueChange={(v) => onChannelCountChange(Number(v) as ChannelCount)}
               >
-                <SelectTrigger className="w-24 h-7 text-xs bg-white/5 border-white/10">
+                <SelectTrigger className="w-28 h-8 text-xs bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -363,10 +352,19 @@ export function MicrophoneSelector({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+        </div>
 
+        {/* Processing Settings */}
+        <div className="px-4 py-3 border-t border-white/10">
+          <div className="pb-2">
+            <span className="text-xs text-zinc-500 uppercase tracking-wide">Processing</span>
+          </div>
+          
+          <div className="space-y-3">
             {/* Noise Suppression */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-400">Noise Suppression</span>
+              <span className="text-xs text-zinc-300">Noise Suppression</span>
               <Switch 
                 checked={noiseSuppression} 
                 onCheckedChange={onNoiseSuppressionChange}
@@ -376,7 +374,7 @@ export function MicrophoneSelector({
 
             {/* Echo Cancellation */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-400">Echo Cancellation</span>
+              <span className="text-xs text-zinc-300">Echo Cancellation</span>
               <Switch 
                 checked={echoCancellation} 
                 onCheckedChange={onEchoCancellationChange}
@@ -386,7 +384,7 @@ export function MicrophoneSelector({
 
             {/* Auto Gain Control */}
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-400">Auto Gain</span>
+              <span className="text-xs text-zinc-300">Auto Gain Control</span>
               <Switch 
                 checked={autoGainControl} 
                 onCheckedChange={onAutoGainControlChange}
@@ -394,11 +392,11 @@ export function MicrophoneSelector({
               />
             </div>
           </div>
-        )}
+        </div>
 
         {/* Error Display */}
         {error && (
-          <div className="px-3 py-2 bg-red-500/10 border-t border-red-500/20">
+          <div className="px-4 py-2.5 bg-red-500/10 border-t border-red-500/20">
             <p className="text-xs text-red-400 truncate" title={error.message}>
               {error.message}
             </p>
@@ -407,14 +405,14 @@ export function MicrophoneSelector({
 
         {/* Permission Denied Warning */}
         {permissionState === 'denied' && (
-          <div className="px-3 py-2 bg-amber-500/10 border-t border-amber-500/20">
+          <div className="px-4 py-2.5 bg-amber-500/10 border-t border-amber-500/20">
             <p className="text-xs text-amber-400">
               Microphone access denied. Please enable in system settings.
             </p>
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }
 
