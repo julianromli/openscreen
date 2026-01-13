@@ -70,6 +70,26 @@ export function MicrophoneSettingsPage() {
     });
   }, [selectedDeviceId, isEnabled]);
 
+  // Save all settings before window closes (handles OS close button, Alt+F4, etc.)
+  // The useMicrophone hook's cleanup effect handles stream cleanup on unmount
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Persist all current settings before window closes
+      setAudioSettings({
+        deviceId: selectedDeviceId,
+        enabled: isEnabled,
+        sampleRate: settings.sampleRate,
+        channelCount: settings.channelCount,
+        noiseSuppression: settings.noiseSuppression,
+        echoCancellation: settings.echoCancellation,
+        autoGainControl: settings.autoGainControl,
+      });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [selectedDeviceId, isEnabled, settings]);
+
   // Handle device selection
   const handleDeviceSelect = useCallback(async (deviceId: string) => {
     await selectDevice(deviceId);

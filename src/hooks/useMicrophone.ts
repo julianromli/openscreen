@@ -375,31 +375,54 @@ export function useMicrophone(constraints?: AudioConstraints): UseMicrophoneRetu
 
   /**
    * Effect: Re-apply constraints when they change (restart stream with new constraints)
+   * Uses cancellation flag to prevent race conditions with rapid changes
    */
   useEffect(() => {
     // Only re-apply if we're currently enabled and have a selected device
     if (!isEnabled || !selectedDeviceId) return;
 
+    // Cancellation flag to prevent race conditions
+    let cancelled = false;
+
     // Re-create stream with new constraints
     const applyNewConstraints = async () => {
       try {
-        // Stop current stream
+        // Stop current stream first
         if (streamRef.current) {
           stopStream(streamRef.current);
         }
         cleanupAudioAnalyser();
 
+        // Check if cancelled before expensive async operation
+        if (cancelled) return;
+
         // Get new stream with updated constraints
         const newStream = await getAudioStream(selectedDeviceId, constraints);
+
+        // Check again after async operation - effect may have been cleaned up
+        if (cancelled) {
+          // Clean up the stream we just created since we're cancelled
+          stopStream(newStream);
+          return;
+        }
+
         setStream(newStream);
         setupAudioAnalyser(newStream);
       } catch (err) {
-        console.error('Failed to apply new audio constraints:', err);
-        setError(err as Error);
+        // Only set error if not cancelled
+        if (!cancelled) {
+          console.error('Failed to apply new audio constraints:', err);
+          setError(err as Error);
+        }
       }
     };
 
     applyNewConstraints();
+
+    // Cleanup function - mark as cancelled to prevent stale updates
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     constraints?.sampleRate,
