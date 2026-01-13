@@ -613,10 +613,10 @@ export function SettingsPanel({
         </div>
       </Tabs>
 
-      <div className="mt-4 pt-4 border-t border-white/5">
+      <div className="mt-6 pt-4 border-t border-white/5">
         {/* Format Selection */}
         <div className="mb-4">
-          <div className="mb-2 text-xs font-medium text-slate-400 uppercase tracking-wider">Export Format</div>
+          <div className="mb-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Export Format</div>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => onExportFormatChange?.('mp4')}
