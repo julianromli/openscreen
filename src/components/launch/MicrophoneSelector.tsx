@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { Button } from "../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { useMicrophone } from "../../hooks/useMicrophone";
 import { getAudioSettings, setAudioSettings } from "../../stores/audioSettings";
 import { cn } from "@/lib/utils";
 import { FaMicrophone, FaMicrophoneSlash, FaCheck } from "react-icons/fa";
@@ -16,25 +15,43 @@ interface MicrophoneSelectorProps {
   disabled?: boolean;
   /** Additional class names */
   className?: string;
+  /** List of available audio input devices */
+  devices: MediaDeviceInfo[];
+  /** Currently selected device ID */
+  selectedDeviceId: string | null;
+  /** Select a specific device by ID */
+  selectDevice: (deviceId: string) => Promise<void>;
+  /** Audio level 0-100, updated at ~60fps */
+  audioLevel: number;
+  /** Whether microphone is currently enabled */
+  isEnabled: boolean;
+  /** Enable microphone with default/first device */
+  enable: () => Promise<void>;
+  /** Disable microphone and stop stream */
+  disable: () => void;
+  /** Current error, if any */
+  error: Error | null;
+  /** Current permission state */
+  permissionState: 'granted' | 'denied' | 'prompt' | 'unknown';
 }
 
 // ============================================
 // Component
 // ============================================
 
-export function MicrophoneSelector({ disabled = false, className }: MicrophoneSelectorProps) {
-  const {
-    devices,
-    selectedDeviceId,
-    selectDevice,
-    audioLevel,
-    isEnabled,
-    enable,
-    disable,
-    error,
-    permissionState,
-  } = useMicrophone();
-
+export function MicrophoneSelector({
+  disabled = false,
+  className,
+  devices,
+  selectedDeviceId,
+  selectDevice,
+  audioLevel,
+  isEnabled,
+  enable,
+  disable,
+  error,
+  permissionState,
+}: MicrophoneSelectorProps) {
   // Restore settings from localStorage on mount
   useEffect(() => {
     const savedSettings = getAudioSettings();

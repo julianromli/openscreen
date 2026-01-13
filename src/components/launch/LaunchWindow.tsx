@@ -13,8 +13,19 @@ import { ContentClamp } from "../ui/content-clamp";
 import { MicrophoneSelector } from "./MicrophoneSelector";
 
 export function LaunchWindow() {
-  // Get audio stream from microphone hook
-  const { stream: audioStream } = useMicrophone();
+  // Get all microphone state from the single hook instance
+  const {
+    stream: audioStream,
+    devices,
+    selectedDeviceId,
+    selectDevice,
+    audioLevel,
+    isEnabled,
+    enable,
+    disable,
+    error: micError,
+    permissionState,
+  } = useMicrophone();
   
   // Pass audio stream to screen recorder for combined recording
   const { recording, toggleRecording } = useScreenRecorder({ audioStream });
@@ -100,7 +111,7 @@ export function LaunchWindow() {
   };
 
   return (
-    <div className="w-full h-full flex items-center bg-transparent">
+    <div className="w-full h-full flex items-end pb-2 bg-transparent">
       <div
         className={`w-full max-w-[500px] mx-auto flex items-center justify-between px-4 py-2 ${styles.electronDrag}`}
         style={{
@@ -129,7 +140,18 @@ export function LaunchWindow() {
         <div className="w-px h-6 bg-white/30" />
 
         {/* Microphone selector */}
-        <MicrophoneSelector disabled={recording} />
+        <MicrophoneSelector
+          devices={devices}
+          selectedDeviceId={selectedDeviceId}
+          selectDevice={selectDevice}
+          audioLevel={audioLevel}
+          isEnabled={isEnabled}
+          enable={enable}
+          disable={disable}
+          error={micError}
+          permissionState={permissionState}
+          disabled={recording}
+        />
 
         <div className="w-px h-6 bg-white/30" />
 
