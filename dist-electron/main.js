@@ -1,4 +1,4 @@
-import { ipcMain, screen, BrowserWindow, desktopCapturer, shell, app, dialog, nativeImage, Tray, Menu } from "electron";
+import { ipcMain, screen, BrowserWindow, app, desktopCapturer, shell, dialog, nativeImage, Tray, Menu } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -60,13 +60,16 @@ function createHudOverlayWindow() {
   return win;
 }
 function createEditorWindow() {
+  const isMac = process.platform === "darwin";
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 12, y: 12 },
+    ...isMac && {
+      titleBarStyle: "hiddenInset",
+      trafficLightPosition: { x: 12, y: 12 }
+    },
     transparent: false,
     resizable: true,
     alwaysOnTop: false,
@@ -122,6 +125,166 @@ function createSourceSelectorWindow() {
     });
   }
   return win;
+}
+const PRESETS_FILE_NAME = "presets.json";
+const CURRENT_VERSION = 1;
+function getPresetsFilePath() {
+  return path.join(app.getPath("userData"), PRESETS_FILE_NAME);
+}
+function createEmptyStore() {
+  return {
+    version: CURRENT_VERSION,
+    defaultPresetId: null,
+    presets: []
+  };
+}
+async function readPresetsStore() {
+  try {
+    const filePath = getPresetsFilePath();
+    const data = await fs.readFile(filePath, "utf-8");
+    const store = JSON.parse(data);
+    if (!store.presets || !Array.isArray(store.presets)) {
+      console.warn("Invalid presets file, creating new store");
+      return createEmptyStore();
+    }
+    return store;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return createEmptyStore();
+    }
+    console.error("Failed to read presets file:", error);
+    try {
+      const filePath = getPresetsFilePath();
+      const backupPath = filePath + ".backup." + Date.now();
+      await fs.rename(filePath, backupPath);
+      console.log("Backed up corrupt presets file to:", backupPath);
+    } catch {
+    }
+    return createEmptyStore();
+  }
+}
+async function writePresetsStore(store) {
+  const filePath = getPresetsFilePath();
+  await fs.writeFile(filePath, JSON.stringify(store, null, 2), "utf-8");
+}
+async function getPresets() {
+  try {
+    const store = await readPresetsStore();
+    return {
+      success: true,
+      presets: store.presets,
+      defaultPresetId: store.defaultPresetId
+    };
+  } catch (error) {
+    console.error("Failed to get presets:", error);
+    return {
+      success: false,
+      presets: [],
+      defaultPresetId: null
+    };
+  }
+}
+async function savePreset(preset) {
+  try {
+    const store = await readPresetsStore();
+    const newPreset = {
+      ...preset,
+      id: crypto.randomUUID(),
+      createdAt: Date.now()
+    };
+    if (newPreset.isDefault) {
+      store.presets = store.presets.map((p) => ({ ...p, isDefault: false }));
+      store.defaultPresetId = newPreset.id;
+    }
+    store.presets.push(newPreset);
+    await writePresetsStore(store);
+    return { success: true, preset: newPreset };
+  } catch (error) {
+    console.error("Failed to save preset:", error);
+    return { success: false, error: String(error) };
+  }
+}
+async function updatePreset(id, updates) {
+  try {
+    const store = await readPresetsStore();
+    const index = store.presets.findIndex((p) => p.id === id);
+    if (index === -1) {
+      return { success: false, error: "Preset not found" };
+    }
+    if (updates.isDefault === true) {
+      store.presets = store.presets.map((p) => ({ ...p, isDefault: false }));
+      store.defaultPresetId = id;
+    } else if (updates.isDefault === false && store.defaultPresetId === id) {
+      store.defaultPresetId = null;
+    }
+    store.presets[index] = { ...store.presets[index], ...updates };
+    await writePresetsStore(store);
+    return { success: true, preset: store.presets[index] };
+  } catch (error) {
+    console.error("Failed to update preset:", error);
+    return { success: false, error: String(error) };
+  }
+}
+async function deletePreset(id) {
+  try {
+    const store = await readPresetsStore();
+    const index = store.presets.findIndex((p) => p.id === id);
+    if (index === -1) {
+      return { success: false, error: "Preset not found" };
+    }
+    if (store.defaultPresetId === id) {
+      store.defaultPresetId = null;
+    }
+    store.presets.splice(index, 1);
+    await writePresetsStore(store);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete preset:", error);
+    return { success: false, error: String(error) };
+  }
+}
+async function duplicatePreset(id) {
+  try {
+    const store = await readPresetsStore();
+    const original = store.presets.find((p) => p.id === id);
+    if (!original) {
+      return { success: false, error: "Preset not found" };
+    }
+    const newPreset = {
+      ...original,
+      id: crypto.randomUUID(),
+      name: `Copy of ${original.name}`,
+      createdAt: Date.now(),
+      isDefault: false
+      // Duplicates should never be default
+    };
+    store.presets.push(newPreset);
+    await writePresetsStore(store);
+    return { success: true, preset: newPreset };
+  } catch (error) {
+    console.error("Failed to duplicate preset:", error);
+    return { success: false, error: String(error) };
+  }
+}
+async function setDefaultPreset(id) {
+  try {
+    const store = await readPresetsStore();
+    store.presets = store.presets.map((p) => ({ ...p, isDefault: false }));
+    store.defaultPresetId = null;
+    if (id) {
+      const preset = store.presets.find((p) => p.id === id);
+      if (!preset) {
+        return { success: false, error: "Preset not found" };
+      }
+      preset.isDefault = true;
+      store.defaultPresetId = id;
+    }
+    await writePresetsStore(store);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to set default preset:", error);
+    return { success: false, error: String(error) };
+  }
 }
 let selectedSource = null;
 function registerIpcHandlers(createEditorWindow2, createSourceSelectorWindow2, getMainWindow, getSourceSelectorWindow, onRecordingStateChange) {
@@ -295,6 +458,24 @@ function registerIpcHandlers(createEditorWindow2, createSourceSelectorWindow2, g
   ipcMain.handle("get-platform", () => {
     return process.platform;
   });
+  ipcMain.handle("presets:get", async () => {
+    return await getPresets();
+  });
+  ipcMain.handle("presets:save", async (_, preset) => {
+    return await savePreset(preset);
+  });
+  ipcMain.handle("presets:update", async (_, id, updates) => {
+    return await updatePreset(id, updates);
+  });
+  ipcMain.handle("presets:delete", async (_, id) => {
+    return await deletePreset(id);
+  });
+  ipcMain.handle("presets:duplicate", async (_, id) => {
+    return await duplicatePreset(id);
+  });
+  ipcMain.handle("presets:setDefault", async (_, id) => {
+    return await setDefaultPreset(id);
+  });
 }
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RECORDINGS_DIR = path.join(app.getPath("userData"), "recordings");
@@ -316,19 +497,26 @@ let mainWindow = null;
 let sourceSelectorWindow = null;
 let tray = null;
 let selectedSourceName = "";
+const defaultTrayIcon = getTrayIcon("openscreen.png");
+const recordingTrayIcon = getTrayIcon("rec-button.png");
 function createWindow() {
   mainWindow = createHudOverlayWindow();
 }
 function createTray() {
-  const iconPath = path.join(process.env.VITE_PUBLIC || RENDERER_DIST, "rec-button.png");
-  let icon = nativeImage.createFromPath(iconPath);
-  icon = icon.resize({ width: 24, height: 24, quality: "best" });
-  tray = new Tray(icon);
-  updateTrayMenu();
+  tray = new Tray(defaultTrayIcon);
 }
-function updateTrayMenu() {
+function getTrayIcon(filename) {
+  return nativeImage.createFromPath(path.join(process.env.VITE_PUBLIC || RENDERER_DIST, filename)).resize({
+    width: 24,
+    height: 24,
+    quality: "best"
+  });
+}
+function updateTrayMenu(recording = false) {
   if (!tray) return;
-  const menuTemplate = [
+  const trayIcon = recording ? recordingTrayIcon : defaultTrayIcon;
+  const trayToolTip = recording ? `Recording: ${selectedSourceName}` : "OpenScreen";
+  const menuTemplate = recording ? [
     {
       label: "Stop Recording",
       click: () => {
@@ -337,10 +525,27 @@ function updateTrayMenu() {
         }
       }
     }
+  ] : [
+    {
+      label: "Open",
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.isMinimized() && mainWindow.restore();
+        } else {
+          createWindow();
+        }
+      }
+    },
+    {
+      label: "Quit",
+      click: () => {
+        app.quit();
+      }
+    }
   ];
-  const contextMenu = Menu.buildFromTemplate(menuTemplate);
-  tray.setContextMenu(contextMenu);
-  tray.setToolTip(`Recording: ${selectedSourceName}`);
+  tray.setImage(trayIcon);
+  tray.setToolTip(trayToolTip);
+  tray.setContextMenu(Menu.buildFromTemplate(menuTemplate));
 }
 function createEditorWindowWrapper() {
   if (mainWindow) {
@@ -366,10 +571,10 @@ app.on("activate", () => {
 app.whenReady().then(async () => {
   const { ipcMain: ipcMain2 } = await import("electron");
   ipcMain2.on("hud-overlay-close", () => {
-    if (process.platform === "darwin") {
-      app.quit();
-    }
+    app.quit();
   });
+  createTray();
+  updateTrayMenu();
   await ensureRecordingsDir();
   registerIpcHandlers(
     createEditorWindowWrapper,
@@ -378,14 +583,9 @@ app.whenReady().then(async () => {
     () => sourceSelectorWindow,
     (recording, sourceName) => {
       selectedSourceName = sourceName;
-      if (recording) {
-        if (!tray) createTray();
-        updateTrayMenu();
-      } else {
-        if (tray) {
-          tray.destroy();
-          tray = null;
-        }
+      if (!tray) createTray();
+      updateTrayMenu(recording);
+      if (!recording) {
         if (mainWindow) mainWindow.restore();
       }
     }
