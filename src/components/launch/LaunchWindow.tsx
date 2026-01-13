@@ -58,6 +58,8 @@ export function LaunchWindow() {
     stream: audioStream,
     devices,
     isEnabled,
+    selectDevice,
+    enable,
     error: micError,
     permissionState,
   } = useMicrophone({
@@ -67,6 +69,27 @@ export function LaunchWindow() {
     echoCancellation: audioSettings.echoCancellation,
     autoGainControl: audioSettings.autoGainControl,
   });
+
+  // Restore microphone state when settings change (including on mount)
+  // This ensures mic is enabled if user configured it in settings window
+  useEffect(() => {
+    // Only restore if settings say enabled but hook says disabled
+    if (audioSettings.enabled && !isEnabled) {
+      console.log('[LaunchWindow] Restoring mic state from settings:', audioSettings);
+      
+      if (audioSettings.deviceId) {
+        // Try to select the saved device
+        selectDevice(audioSettings.deviceId).catch((err) => {
+          console.warn('[LaunchWindow] Failed to select saved device, trying default:', err);
+          // If that fails, try enabling with default device
+          enable().catch(console.error);
+        });
+      } else {
+        // No specific device, just enable with default
+        enable().catch(console.error);
+      }
+    }
+  }, [audioSettings.enabled, audioSettings.deviceId, isEnabled, selectDevice, enable]);
   
   // Pass audio stream to screen recorder for combined recording
   const { recording, toggleRecording } = useScreenRecorder({ audioStream });

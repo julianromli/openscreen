@@ -151,6 +151,7 @@ export function getAudioSettings(): AudioSettings {
 export function setAudioSettings(settings: Partial<AudioSettings>): void {
   const storage = getLocalStorage();
   if (!storage) {
+    console.warn('[AudioSettings] localStorage not available');
     return;
   }
 
@@ -162,8 +163,9 @@ export function setAudioSettings(settings: Partial<AudioSettings>): void {
     };
     
     storage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  } catch {
-    // Silently fail if localStorage is full or unavailable
+    console.log('[AudioSettings] Saved:', updated);
+  } catch (err) {
+    console.error('[AudioSettings] Failed to save:', err);
   }
 }
 
