@@ -87,4 +87,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return ipcRenderer.invoke('presets:setDefault', id)
     },
   },
+
+  // ============================================
+  // TRANSCRIPTION API
+  // ============================================
+  transcribeVideo: (request: { videoPath: string; language: string; apiKey: string }) => {
+    return ipcRenderer.invoke('transcribe-video', request)
+  },
+
+  onTranscriptionProgress: (callback: (progress: { status: string; progress: number; message: string }) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: { status: string; progress: number; message: string }) => callback(progress)
+    ipcRenderer.on('transcription-progress', listener)
+    return () => ipcRenderer.removeListener('transcription-progress', listener)
+  },
 })

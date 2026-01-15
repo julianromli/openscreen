@@ -9,10 +9,11 @@ import { useState } from "react";
 import Block from '@uiw/react-color-block';
 import { Trash2, Download, Crop, X, Bug, Upload, Star, Film, Image } from "lucide-react";
 import { toast } from "sonner";
-import type { ZoomDepth, CropRegion, AnnotationRegion, AnnotationType, Preset, PresetSettings } from "./types";
+import type { ZoomDepth, CropRegion, AnnotationRegion, AnnotationType, Preset, PresetSettings, SubtitleRegion, SubtitleStyle, SubtitlePositionPreset } from "./types";
 import { CropControl } from "./CropControl";
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
 import { AnnotationSettingsPanel } from "./AnnotationSettingsPanel";
+import { SubtitleSettingsPanel } from "./subtitle/SubtitleSettingsPanel";
 import { PresetSelector } from "./PresetSelector";
 import { type AspectRatio } from "@/utils/aspectRatioUtils";
 import type { ExportQuality, ExportFormat, GifFrameRate, GifSizePreset } from "@/lib/exporter";
@@ -93,6 +94,13 @@ interface SettingsPanelProps {
   onAnnotationStyleChange?: (id: string, style: Partial<AnnotationRegion['style']>) => void;
   onAnnotationFigureDataChange?: (id: string, figureData: any) => void;
   onAnnotationDelete?: (id: string) => void;
+  // Subtitle props
+  selectedSubtitleId?: string | null;
+  subtitleRegions?: SubtitleRegion[];
+  onSubtitleContentChange?: (id: string, text: string) => void;
+  onSubtitleStyleChange?: (id: string, style: Partial<SubtitleStyle>) => void;
+  onSubtitlePositionChange?: (id: string, position: SubtitlePositionPreset, customPosition?: { x: number; y: number }) => void;
+  onSubtitleDelete?: (id: string) => void;
   // Preset props
   presets?: Preset[];
   defaultPresetId?: string | null;
@@ -160,6 +168,13 @@ export function SettingsPanel({
   onAnnotationStyleChange,
   onAnnotationFigureDataChange,
   onAnnotationDelete,
+  // Subtitle props
+  selectedSubtitleId,
+  subtitleRegions = [],
+  onSubtitleContentChange,
+  onSubtitleStyleChange,
+  onSubtitlePositionChange,
+  onSubtitleDelete,
   // Preset props
   presets = [],
   defaultPresetId = null,
@@ -264,6 +279,11 @@ export function SettingsPanel({
     ? annotationRegions.find(a => a.id === selectedAnnotationId)
     : null;
 
+  // Find selected subtitle
+  const selectedSubtitle = selectedSubtitleId 
+    ? subtitleRegions.find(s => s.id === selectedSubtitleId)
+    : null;
+
   // If an annotation is selected, show annotation settings instead
   if (selectedAnnotation && onAnnotationContentChange && onAnnotationTypeChange && onAnnotationStyleChange && onAnnotationDelete) {
     return (
@@ -274,6 +294,19 @@ export function SettingsPanel({
         onStyleChange={(style) => onAnnotationStyleChange(selectedAnnotation.id, style)}
         onFigureDataChange={onAnnotationFigureDataChange ? (figureData) => onAnnotationFigureDataChange(selectedAnnotation.id, figureData) : undefined}
         onDelete={() => onAnnotationDelete(selectedAnnotation.id)}
+      />
+    );
+  }
+
+  // If a subtitle is selected, show subtitle settings instead
+  if (selectedSubtitle && onSubtitleContentChange && onSubtitleStyleChange && onSubtitlePositionChange && onSubtitleDelete) {
+    return (
+      <SubtitleSettingsPanel
+        subtitle={selectedSubtitle}
+        onContentChange={(text) => onSubtitleContentChange(selectedSubtitle.id, text)}
+        onStyleChange={(style) => onSubtitleStyleChange(selectedSubtitle.id, style)}
+        onPositionChange={(position, customPosition) => onSubtitlePositionChange(selectedSubtitle.id, position, customPosition)}
+        onDelete={() => onSubtitleDelete(selectedSubtitle.id)}
       />
     );
   }
@@ -740,7 +773,7 @@ export function SettingsPanel({
             <div>
               <div className="mb-1.5 text-xs font-medium text-slate-400">Output Size</div>
               <div className="bg-white/5 border border-white/5 p-1 w-full grid grid-cols-3 h-auto rounded-xl">
-                {Object.entries(GIF_SIZE_PRESETS).map(([key, preset]) => (
+                {Object.entries(GIF_SIZE_PRESETS).map(([key, _preset]) => (
                   <button
                     key={key}
                     onClick={() => onGifSizePresetChange?.(key as GifSizePreset)}

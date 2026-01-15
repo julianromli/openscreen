@@ -22,6 +22,8 @@ import {
   DEFAULT_ANNOTATION_STYLE,
   DEFAULT_FIGURE_DATA,
   DEFAULT_PRESET_SETTINGS,
+  DEFAULT_SUBTITLE_STYLE,
+  DEFAULT_SUBTITLE_POSITION,
   type ZoomDepth,
   type ZoomFocus,
   type ZoomRegion,
@@ -31,6 +33,9 @@ import {
   type FigureData,
   type Preset,
   type PresetSettings,
+  type SubtitleRegion,
+  type SubtitleStyle,
+  type SubtitlePositionPreset,
 } from "./types";
 import { VideoExporter, GifExporter, type ExportProgress, type ExportQuality, type ExportSettings, type ExportFormat, type GifFrameRate, type GifSizePreset, GIF_SIZE_PRESETS, calculateOutputDimensions } from "@/lib/exporter";
 import { type AspectRatio, getAspectRatioValue } from "@/utils/aspectRatioUtils";
@@ -59,6 +64,8 @@ export default function VideoEditor() {
   const [selectedTrimId, setSelectedTrimId] = useState<string | null>(null);
   const [annotationRegions, setAnnotationRegions] = useState<AnnotationRegion[]>([]);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+  const [subtitleRegions, setSubtitleRegions] = useState<SubtitleRegion[]>([]);
+  const [selectedSubtitleId, setSelectedSubtitleId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -76,6 +83,7 @@ export default function VideoEditor() {
   const nextTrimIdRef = useRef(1);
   const nextAnnotationIdRef = useRef(1);
   const nextAnnotationZIndexRef = useRef(1); // Track z-index for stacking order
+  const nextSubtitleIdRef = useRef(1);
   const exporterRef = useRef<VideoExporter | null>(null);
   const hasAppliedDefaultPreset = useRef(false);
 
@@ -209,7 +217,10 @@ export default function VideoEditor() {
 
   const handleSelectZoom = useCallback((id: string | null) => {
     setSelectedZoomId(id);
-    if (id) setSelectedTrimId(null);
+    if (id) {
+      setSelectedTrimId(null);
+      setSelectedSubtitleId(null);
+    }
   }, []);
 
   const handleSelectTrim = useCallback((id: string | null) => {
@@ -217,6 +228,7 @@ export default function VideoEditor() {
     if (id) {
       setSelectedZoomId(null);
       setSelectedAnnotationId(null);
+      setSelectedSubtitleId(null);
     }
   }, []);
 
@@ -225,6 +237,7 @@ export default function VideoEditor() {
     if (id) {
       setSelectedZoomId(null);
       setSelectedTrimId(null);
+      setSelectedSubtitleId(null);
     }
   }, []);
 
@@ -241,6 +254,7 @@ export default function VideoEditor() {
     setSelectedZoomId(id);
     setSelectedTrimId(null);
     setSelectedAnnotationId(null);
+    setSelectedSubtitleId(null);
   }, []);
 
   const handleTrimAdded = useCallback((span: Span) => {
@@ -254,6 +268,7 @@ export default function VideoEditor() {
     setSelectedTrimId(id);
     setSelectedZoomId(null);
     setSelectedAnnotationId(null);
+    setSelectedSubtitleId(null);
   }, []);
 
   const handleZoomSpanChange = useCallback((id: string, span: Span) => {
@@ -344,6 +359,7 @@ export default function VideoEditor() {
     setSelectedAnnotationId(id);
     setSelectedZoomId(null);
     setSelectedTrimId(null);
+    setSelectedSubtitleId(null);
   }, []);
 
   const handleAnnotationSpanChange = useCallback((id: string, span: Span) => {
@@ -449,6 +465,121 @@ export default function VideoEditor() {
       ),
     );
   }, []);
+
+  // ============================================
+  // SUBTITLE HANDLERS
+  // ============================================
+
+  const handleSelectSubtitle = useCallback((id: string | null) => {
+    setSelectedSubtitleId(id);
+    if (id) {
+      setSelectedZoomId(null);
+      setSelectedTrimId(null);
+      setSelectedAnnotationId(null);
+    }
+  }, []);
+
+  const handleSubtitleAdded = useCallback((span: Span) => {
+    const id = `subtitle-${nextSubtitleIdRef.current++}`;
+    const newRegion: SubtitleRegion = {
+      id,
+      startMs: Math.round(span.start),
+      endMs: Math.round(span.end),
+      text: 'Enter subtitle...',
+      words: [],
+      positionPreset: 'bottom-center',
+      customPosition: { ...DEFAULT_SUBTITLE_POSITION },
+      style: { ...DEFAULT_SUBTITLE_STYLE },
+    };
+    setSubtitleRegions((prev) => [...prev, newRegion]);
+    setSelectedSubtitleId(id);
+    setSelectedZoomId(null);
+    setSelectedTrimId(null);
+    setSelectedAnnotationId(null);
+  }, []);
+
+  const handleSubtitleSpanChange = useCallback((id: string, span: Span) => {
+    setSubtitleRegions((prev) =>
+      prev.map((region) =>
+        region.id === id
+          ? {
+              ...region,
+              startMs: Math.round(span.start),
+              endMs: Math.round(span.end),
+            }
+          : region,
+      ),
+    );
+  }, []);
+
+  const handleSubtitleDelete = useCallback((id: string) => {
+    setSubtitleRegions((prev) => prev.filter((region) => region.id !== id));
+    if (selectedSubtitleId === id) {
+      setSelectedSubtitleId(null);
+    }
+  }, [selectedSubtitleId]);
+
+  const handleSubtitleContentChange = useCallback((id: string, text: string) => {
+    setSubtitleRegions((prev) =>
+      prev.map((region) =>
+        region.id === id
+          ? { ...region, text }
+          : region,
+      ),
+    );
+  }, []);
+
+  const handleSubtitleStyleChange = useCallback((id: string, style: Partial<SubtitleStyle>) => {
+    setSubtitleRegions((prev) =>
+      prev.map((region) =>
+        region.id === id
+          ? { ...region, style: { ...region.style, ...style } }
+          : region,
+      ),
+    );
+  }, []);
+
+  const handleSubtitlePositionChange = useCallback((
+    id: string,
+    position: SubtitlePositionPreset,
+    customPosition?: { x: number; y: number }
+  ) => {
+    setSubtitleRegions((prev) =>
+      prev.map((region) =>
+        region.id === id
+          ? {
+              ...region,
+              positionPreset: position,
+              customPosition: customPosition ?? region.customPosition,
+            }
+          : region,
+      ),
+    );
+  }, []);
+
+  // Handler for auto-generated subtitles
+  const handleAutoGenerateSubtitles = useCallback((newSubtitles: SubtitleRegion[]) => {
+    // Assign unique IDs using the ref
+    const subtitlesWithIds = newSubtitles.map(s => ({
+      ...s,
+      id: `subtitle-${nextSubtitleIdRef.current++}`,
+    }));
+    setSubtitleRegions(prev => [...prev, ...subtitlesWithIds]);
+  }, []);
+
+  // Helper to extract file path from file:// URL
+  const getVideoFilePath = useCallback((): string | undefined => {
+    if (!videoPath) return undefined;
+    // Remove file:// or file:/// prefix and decode URI
+    let path = videoPath;
+    if (path.startsWith('file:///')) {
+      path = path.slice(8); // Remove 'file:///'
+    } else if (path.startsWith('file://')) {
+      path = path.slice(7); // Remove 'file://'
+    }
+    // Decode URI components
+    return decodeURIComponent(path);
+  }, [videoPath]);
   
   // Global Tab prevention
   useEffect(() => {
@@ -500,6 +631,12 @@ export default function VideoEditor() {
       setSelectedAnnotationId(null);
     }
   }, [selectedAnnotationId, annotationRegions]);
+
+  useEffect(() => {
+    if (selectedSubtitleId && !subtitleRegions.some((region) => region.id === selectedSubtitleId)) {
+      setSelectedSubtitleId(null);
+    }
+  }, [selectedSubtitleId, subtitleRegions]);
 
   const handleOpenExportDialog = useCallback(() => {
     if (!videoPath) {
@@ -597,6 +734,7 @@ export default function VideoEditor() {
           videoPadding: padding,
           cropRegion,
           annotationRegions,
+          subtitleRegions,
           previewWidth,
           previewHeight,
           onProgress: (progress: ExportProgress) => {
@@ -723,6 +861,7 @@ export default function VideoEditor() {
           padding,
           cropRegion,
           annotationRegions,
+          subtitleRegions,
           previewWidth,
           previewHeight,
           onProgress: (progress: ExportProgress) => {
@@ -846,6 +985,10 @@ export default function VideoEditor() {
                       onSelectAnnotation={handleSelectAnnotation}
                       onAnnotationPositionChange={handleAnnotationPositionChange}
                       onAnnotationSizeChange={handleAnnotationSizeChange}
+                      subtitleRegions={subtitleRegions}
+                      selectedSubtitleId={selectedSubtitleId}
+                      onSelectSubtitle={handleSelectSubtitle}
+                      onSubtitlePositionChange={handleSubtitlePositionChange}
                     />
                   </div>
                 </div>
@@ -893,6 +1036,14 @@ export default function VideoEditor() {
               onAnnotationDelete={handleAnnotationDelete}
               selectedAnnotationId={selectedAnnotationId}
               onSelectAnnotation={handleSelectAnnotation}
+              subtitleRegions={subtitleRegions}
+              onSubtitleAdded={handleSubtitleAdded}
+              onSubtitleSpanChange={handleSubtitleSpanChange}
+              onSubtitleDelete={handleSubtitleDelete}
+              selectedSubtitleId={selectedSubtitleId}
+              onSelectSubtitle={handleSelectSubtitle}
+              videoPath={getVideoFilePath()}
+              onAutoGenerateSubtitles={handleAutoGenerateSubtitles}
               aspectRatio={aspectRatio}
               onAspectRatioChange={setAspectRatio}
             />
@@ -951,6 +1102,13 @@ export default function VideoEditor() {
           onAnnotationStyleChange={handleAnnotationStyleChange}
           onAnnotationFigureDataChange={handleAnnotationFigureDataChange}
           onAnnotationDelete={handleAnnotationDelete}
+          // Subtitle props
+          selectedSubtitleId={selectedSubtitleId}
+          subtitleRegions={subtitleRegions}
+          onSubtitleContentChange={handleSubtitleContentChange}
+          onSubtitleStyleChange={handleSubtitleStyleChange}
+          onSubtitlePositionChange={handleSubtitlePositionChange}
+          onSubtitleDelete={handleSubtitleDelete}
           // Preset props
           presets={presets}
           defaultPresetId={defaultPresetId}

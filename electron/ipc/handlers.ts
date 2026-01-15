@@ -13,6 +13,8 @@ import {
   type Preset,
   type PresetSettings
 } from './presets'
+import { transcribeVideo } from '../services/transcription'
+import type { TranscriptionRequest, TranscriptionProgress } from '../../src/types/transcription'
 
 let selectedSource: any = null
 
@@ -148,12 +150,16 @@ export function registerIpcHandlers(
         ? [{ name: 'GIF Image', extensions: ['gif'] }]
         : [{ name: 'MP4 Video', extensions: ['mp4'] }];
 
-      const result = await dialog.showSaveDialog(mainWindow || undefined, {
+      const dialogOptions: Electron.SaveDialogOptions = {
         title: isGif ? 'Save Exported GIF' : 'Save Exported Video',
         defaultPath: path.join(app.getPath('downloads'), fileName),
         filters,
         properties: ['createDirectory', 'showOverwriteConfirmation']
-      });
+      };
+
+      const result = mainWindow 
+        ? await dialog.showSaveDialog(mainWindow, dialogOptions)
+        : await dialog.showSaveDialog(dialogOptions);
 
       if (result.canceled || !result.filePath) {
         return {
@@ -256,5 +262,19 @@ export function registerIpcHandlers(
 
   ipcMain.handle('presets:setDefault', async (_, id: string | null) => {
     return await setDefaultPreset(id);
+  });
+
+  // ============================================
+  // TRANSCRIPTION HANDLERS
+  // ============================================
+
+  ipcMain.handle('transcribe-video', async (_event, request: TranscriptionRequest) => {
+    return await transcribeVideo(request, (progress: TranscriptionProgress) => {
+      // Send progress updates to renderer
+      const mainWindow = getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('transcription-progress', progress);
+      }
+    });
   });
 }
