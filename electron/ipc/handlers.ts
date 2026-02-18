@@ -4,6 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { RECORDINGS_DIR } from '../main'
 
+const PROJECT_FILE_EXTENSION = 'openscreen'
 const CURSOR_TELEMETRY_VERSION = 1
 const CURSOR_SAMPLE_INTERVAL_MS = 100
 const MAX_CURSOR_SAMPLES = 60 * 60 * 10 // 1 hour @ 10Hz
@@ -309,6 +310,93 @@ export function registerIpcHandlers(
       };
     }
   });
+
+  ipcMain.handle('save-project-file', async (_, projectData: unknown, suggestedName?: string, existingProjectPath?: string) => {
+    try {
+      if (existingProjectPath) {
+        await fs.writeFile(existingProjectPath, JSON.stringify(projectData, null, 2), 'utf-8')
+        return {
+          success: true,
+          path: existingProjectPath,
+          message: 'Project saved successfully'
+        }
+      }
+
+      const safeName = (suggestedName || `project-${Date.now()}`).replace(/[^a-zA-Z0-9-_]/g, '_')
+      const defaultName = safeName.endsWith(`.${PROJECT_FILE_EXTENSION}`)
+        ? safeName
+        : `${safeName}.${PROJECT_FILE_EXTENSION}`
+
+      const result = await dialog.showSaveDialog({
+        title: 'Save OpenScreen Project',
+        defaultPath: path.join(RECORDINGS_DIR, defaultName),
+        filters: [
+          { name: 'OpenScreen Project', extensions: [PROJECT_FILE_EXTENSION] },
+          { name: 'JSON', extensions: ['json'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+      })
+
+      if (result.canceled || !result.filePath) {
+        return {
+          success: false,
+          cancelled: true,
+          message: 'Save project cancelled'
+        }
+      }
+
+      await fs.writeFile(result.filePath, JSON.stringify(projectData, null, 2), 'utf-8')
+
+      return {
+        success: true,
+        path: result.filePath,
+        message: 'Project saved successfully'
+      }
+    } catch (error) {
+      console.error('Failed to save project file:', error)
+      return {
+        success: false,
+        message: 'Failed to save project file',
+        error: String(error)
+      }
+    }
+  })
+
+  ipcMain.handle('load-project-file', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Open OpenScreen Project',
+        defaultPath: RECORDINGS_DIR,
+        filters: [
+          { name: 'OpenScreen Project', extensions: [PROJECT_FILE_EXTENSION] },
+          { name: 'JSON', extensions: ['json'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: ['openFile']
+      })
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, cancelled: true, message: 'Open project cancelled' }
+      }
+
+      const filePath = result.filePaths[0]
+      const content = await fs.readFile(filePath, 'utf-8')
+      const project = JSON.parse(content)
+
+      return {
+        success: true,
+        path: filePath,
+        project
+      }
+    } catch (error) {
+      console.error('Failed to load project file:', error)
+      return {
+        success: false,
+        message: 'Failed to load project file',
+        error: String(error)
+      }
+    }
+  })
 
 
   ipcMain.handle('set-current-video-path', (_, path: string) => {
