@@ -15,6 +15,7 @@ import { useSettingsPersistence } from "@/hooks/useSettingsPersistence";
 import type { Span } from "dnd-timeline";
 import {
   DEFAULT_ZOOM_DEPTH,
+  DEFAULT_CROP_REGION,
   clampFocusToDepth,
   DEFAULT_ANNOTATION_POSITION,
   DEFAULT_ANNOTATION_SIZE,
