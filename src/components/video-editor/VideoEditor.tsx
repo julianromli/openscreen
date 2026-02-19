@@ -23,6 +23,7 @@ import {
   type ZoomDepth,
   type ZoomFocus,
   type ZoomRegion,
+  type CursorTelemetryPoint,
   type TrimRegion,
   type AnnotationRegion,
   type CropRegion,
@@ -39,7 +40,8 @@ export default function VideoEditor() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
+  const [cursorTelemetry, setCursorTelemetry] = useState<CursorTelemetryPoint[]>([]);
+
   const { 
     settings, 
     isLoaded: isSettingsLoaded, 
@@ -198,6 +200,39 @@ export default function VideoEditor() {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
+    async function loadCursorTelemetry() {
+      if (!videoPath) {
+        if (mounted) {
+          setCursorTelemetry([]);
+        }
+        return;
+      }
+
+      try {
+        const currentVideoResult = await window.electronAPI.getCurrentVideoPath();
+        const sourcePath = currentVideoResult.success ? currentVideoResult.path : undefined;
+        const result = await window.electronAPI.getCursorTelemetry(sourcePath);
+        if (mounted) {
+          setCursorTelemetry(result.success ? result.samples : []);
+        }
+      } catch (telemetryError) {
+        console.warn('Unable to load cursor telemetry:', telemetryError);
+        if (mounted) {
+          setCursorTelemetry([]);
+        }
+      }
+    }
+
+    loadCursorTelemetry();
+
+    return () => {
+      mounted = false;
+    };
+  }, [videoPath]);
+
+  useEffect(() => {
     if (isSettingsLoaded) {
       setWallpaperState(settings.background.value);
       setShadowIntensityState(settings.effects.shadowIntensity);
@@ -218,6 +253,7 @@ export default function VideoEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSettingsLoaded]);
 
+  // Initialize default wallpaper with resolved asset path
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -290,6 +326,21 @@ export default function VideoEditor() {
     setSelectedTrimId(null);
     setSelectedAnnotationId(null);
   }, [updateRegions]);
+
+  const handleZoomSuggested = useCallback((span: Span, focus: ZoomFocus) => {
+    const id = `zoom-${nextZoomIdRef.current++}`;
+    const newRegion: ZoomRegion = {
+      id,
+      startMs: Math.round(span.start),
+      endMs: Math.round(span.end),
+      depth: DEFAULT_ZOOM_DEPTH,
+      focus: clampFocusToDepth(focus, DEFAULT_ZOOM_DEPTH),
+    };
+    setZoomRegions((prev) => [...prev, newRegion]);
+    setSelectedZoomId(id);
+    setSelectedTrimId(null);
+    setSelectedAnnotationId(null);
+  }, []);
 
   const handleTrimAdded = useCallback((span: Span) => {
     const id = `trim-${nextTrimIdRef.current++}`;
@@ -934,8 +985,10 @@ export default function VideoEditor() {
               videoDuration={duration}
               currentTime={currentTime}
               onSeek={handleSeek}
+              cursorTelemetry={cursorTelemetry}
               zoomRegions={zoomRegions}
               onZoomAdded={handleZoomAdded}
+              onZoomSuggested={handleZoomSuggested}
               onZoomSpanChange={handleZoomSpanChange}
               onZoomDelete={handleZoomDelete}
               selectedZoomId={selectedZoomId}
